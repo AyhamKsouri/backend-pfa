@@ -12,10 +12,18 @@ const app = express();
 // Trust proxy (critical in production when behind NGINX, Vercel, etc.)
 app.set('trust proxy', 1);
 
+// CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ['http://localhost:4200', 'http://localhost:5000'];
+
 // Middleware
 app.use(helmetMiddleware);
 app.use(globalLimiter);
-app.use(cors());
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
