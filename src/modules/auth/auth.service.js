@@ -8,20 +8,20 @@ const SALT_ROUNDS = 10;
  * Register a new user
  */
 const register = async (userData) => {
-  const { email, password, username } = userData;
+  const { email, password, firstName, lastName, username } = userData;
 
-  if (!email || !password || !username) {
-    throw new Error('Email, password, and username are required');
+  if (!email || !password || !firstName || !lastName) {
+    throw new Error('Email, password, first name, and last name are required');
   }
 
   const existingUser = await prisma.user.findFirst({
     where: {
-      OR: [{ email }, { username }],
+      email,
     },
   });
 
   if (existingUser) {
-    throw new Error('User with this email or username already exists');
+    throw new Error('User with this email already exists');
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
@@ -29,7 +29,9 @@ const register = async (userData) => {
   const user = await prisma.user.create({
     data: {
       email,
-      username,
+      firstName,
+      lastName,
+      username: username || `${firstName.toLowerCase()}${lastName.toLowerCase()}${Math.floor(Math.random() * 1000)}`,
       passwordHash,
       role: 'MEMBER', // Default role
     },

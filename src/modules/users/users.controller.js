@@ -9,6 +9,8 @@ const getAllUsers = async (req, res) => {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
         username: true,
         role: true,
         createdAt: true,
@@ -40,6 +42,8 @@ const getUserById = async (req, res) => {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
         username: true,
         role: true,
         createdAt: true,
@@ -71,7 +75,7 @@ const updateUser = async (req, res) => {
   }
 
   // 2. Mass Assignment Protection via Whitelisting
-  const allowedFields = ['username', 'email'];
+  const allowedFields = ['firstName', 'lastName', 'email', 'username'];
   if (req.user.role === 'ADMIN') {
     allowedFields.push('role');
   }
@@ -100,6 +104,8 @@ const updateUser = async (req, res) => {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
         username: true,
         role: true,
         createdAt: true,

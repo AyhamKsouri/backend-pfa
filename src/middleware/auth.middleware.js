@@ -36,6 +36,8 @@ const protect = async (req, res, next) => {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
         username: true,
         role: true,
         createdAt: true,

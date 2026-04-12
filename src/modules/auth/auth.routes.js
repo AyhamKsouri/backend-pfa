@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('./auth.controller');
 const { authLimiter } = require('../../middleware/rateLimiter');
+const { registrationValidation } = require('../../middleware/validation.middleware');
 
 /**
  * @swagger
@@ -45,7 +46,7 @@ const { authLimiter } = require('../../middleware/rateLimiter');
  *         description: Invalid input
  */
 // POST /auth/register - Register a new user
-router.post('/register', authLimiter, authController.register);
+router.post('/register', authLimiter, registrationValidation, authController.register);
 
 /**
  * @swagger
