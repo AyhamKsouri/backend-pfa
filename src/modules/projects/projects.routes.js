@@ -31,6 +31,29 @@ router.get('/', projectsController.getProjects);
 
 /**
  * @swagger
+ * /api/projects/{id}:
+ *   get:
+ *     summary: Get project by ID
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Project details
+ *       404:
+ *         description: Project not found
+ */
+// GET /projects/:id - Get a single project
+router.get('/:id', projectsController.getProject);
+
+/**
+ * @swagger
  * /api/projects:
  *   post:
  *     summary: Create a new project

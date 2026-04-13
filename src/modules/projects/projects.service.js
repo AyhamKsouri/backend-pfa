@@ -31,6 +31,52 @@ const getAllProjects = async (userId, userRole) => {
 };
 
 /**
+ * Get a single project by ID with full details (members, tasks, etc.)
+ */
+const getProjectById = async (projectId, userId, userRole) => {
+  const id = parseInt(projectId);
+  
+  const project = await prisma.project.findUnique({
+    where: { id },
+    include: {
+      owner: { select: { id: true, username: true } },
+      members: { 
+        include: { 
+          user: { select: { id: true, username: true } },
+          skills: true
+        } 
+      },
+      tasks: {
+        include: {
+          assignee: { select: { id: true, username: true } },
+          dependencies: {
+            include: {
+              dependency: true
+            }
+          }
+        }
+      },
+      sprints: true
+    },
+  });
+
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  // Security: Check if user has access to this project
+  // Admin sees all, members see if they belong to it
+  if (userRole !== 'ADMIN' && project.ownerId !== userId) {
+    const isMember = project.members.some(m => m.userId === userId);
+    if (!isMember) {
+      throw new Error('Access denied');
+    }
+  }
+
+  return project;
+};
+
+/**
  * Create a new project and add creator as the first ADMIN member
  */
 const createProject = async (userId, projectData) => {
@@ -106,8 +152,16 @@ const generateAIPlan = async (projectId) => {
       }))
     });
   } catch (error) {
+    if (error.code === 'ECONNREFUSED') {
+      console.error(`AI Service Connection Refused at ${aiServiceUrl}`);
+      throw new Error('Failed to connect to AI planning service: Connection refused');
+    }
     console.error('AI Service Error:', error.message);
-    throw new Error('Failed to connect to AI planning service');
+    throw new Error(`AI Service Error: ${error.message}`);
+  }
+
+  if (!aiResponse.data || !aiResponse.data.tasks) {
+    throw new Error('Invalid response from AI planning service');
   }
 
   const { tasks } = aiResponse.data; // Expecting { tasks: [ { title, description, dependencies: [tempId], tempId }, ... ] }
@@ -193,6 +247,7 @@ const updateProjectMethodology = async (projectId, methodology) => {
 
 module.exports = {
   getAllProjects,
+  getProjectById,
   createProject,
   generateAIPlan,
   deleteProject,

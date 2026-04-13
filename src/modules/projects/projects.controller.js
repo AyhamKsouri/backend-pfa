@@ -14,6 +14,26 @@ const getProjects = async (req, res) => {
 };
 
 /**
+ * Get a single project by ID
+ */
+const getProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const project = await projectsService.getProjectById(id, req.user.id, req.user.role);
+    res.status(200).json(project);
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    if (error.message === 'Project not found') {
+      return res.status(404).json({ message: error.message });
+    }
+    if (error.message === 'Access denied') {
+      return res.status(403).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
  * Create a new project (metadata only)
  */
 const createProject = async (req, res) => {
@@ -47,6 +67,10 @@ const triggerAIPlan = async (req, res) => {
     
     if (error.message === 'Project not found') {
       return res.status(404).json({ message: error.message });
+    }
+
+    if (error.message.includes('Failed to connect') || error.message.includes('AI Service Error')) {
+      return res.status(502).json({ message: error.message });
     }
     
     res.status(500).json({ message: 'Internal server error' });
@@ -95,6 +119,7 @@ const updateMethodology = async (req, res) => {
 
 module.exports = {
   getProjects,
+  getProject,
   createProject,
   triggerAIPlan,
   deleteProject,
