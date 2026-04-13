@@ -146,17 +146,18 @@ const generateAIPlan = async (projectId) => {
   let aiResponse;
   try {
     aiResponse = await axios.post(fullUrl, {
-      projectId: project.id,
-      name: project.name,
-      description: project.description,
-      methodology: project.methodology,
-      complexity: project.complexity,
-      durationMonths: project.durationMonths,
-      members: project.members.map(m => ({
-        userId: m.userId,
-        username: m.user.username,
+      project: {
+        name: project.name,
+        duration_days: project.durationMonths * 30, // approximate conversion
+        complexity: project.complexity,
+        methodology: project.methodology
+      },
+      team_members: project.members.map(m => ({
+        id: m.userId,
+        name: m.user.username,
         skills: m.skills.map(s => s.name),
-        experienceLevel: m.experienceLevel
+        experience_level: m.experienceLevel.toLowerCase(), // AI module expects lowercase
+        weekly_availability_hours: m.weeklyAvailability || 40 // default 40 hours
       }))
     });
     console.log(`AI Service Response Status: ${aiResponse.status}`);
