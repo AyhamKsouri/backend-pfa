@@ -133,11 +133,19 @@ const generateAIPlan = async (projectId) => {
   }
 
   // 2. Make a POST request to AI service
-  const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+  let aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+  
+  // Ensure the base URL doesn't have a trailing slash before appending /generate
+  if (aiServiceUrl.endsWith('/')) {
+    aiServiceUrl = aiServiceUrl.slice(0, -1);
+  }
+  
+  const fullUrl = `${aiServiceUrl}/generate`;
+  console.log(`Calling AI Service at: ${fullUrl}`);
   
   let aiResponse;
   try {
-    aiResponse = await axios.post(`${aiServiceUrl}/generate`, {
+    aiResponse = await axios.post(fullUrl, {
       projectId: project.id,
       name: project.name,
       description: project.description,
@@ -151,11 +159,18 @@ const generateAIPlan = async (projectId) => {
         experienceLevel: m.experienceLevel
       }))
     });
+    console.log(`AI Service Response Status: ${aiResponse.status}`);
   } catch (error) {
     if (error.code === 'ECONNREFUSED') {
-      console.error(`AI Service Connection Refused at ${aiServiceUrl}`);
+      console.error(`AI Service Connection Refused at ${fullUrl}`);
       throw new Error('Failed to connect to AI planning service: Connection refused');
     }
+    
+    if (error.response) {
+      console.error(`AI Service responded with status ${error.response.status}:`, error.response.data);
+      throw new Error(`AI Service Error (${error.response.status}): ${JSON.stringify(error.response.data)}`);
+    }
+    
     console.error('AI Service Error:', error.message);
     throw new Error(`AI Service Error: ${error.message}`);
   }
