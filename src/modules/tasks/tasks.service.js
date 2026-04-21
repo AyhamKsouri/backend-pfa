@@ -72,24 +72,40 @@ const deleteTask = async (taskId) => {
  * Includes project name and dependency IDs
  */
 const getTasksByUser = async (userId) => {
-  return prisma.task.findMany({
-    where: { assignedToId: parseInt(userId) },
+  const numericUserId = parseInt(userId);
+  console.log(`[getTasksByUser] Querying tasks for userId: ${numericUserId}`);
+
+  const tasks = await prisma.task.findMany({
+    where: { assignedToId: numericUserId },
     include: {
-      project: {
-        select: {
-          name: true,
-        },
-      },
-      dependencies: {
-        select: {
-          dependencyId: true,
-        },
-      },
+      project: { select: { id: true, name: true } },
+      sprint: { select: { id: true, name: true } },
+      assignedTo: { select: { id: true, username: true, email: true } },
+      dependencies: true,
     },
-    orderBy: {
-      dueDate: 'asc',
-    },
+    orderBy: { dueDate: 'asc' },
   });
+
+  console.log(`[getTasksByUser] Found ${tasks.length} tasks for userId: ${numericUserId}`);
+
+  return tasks.map((task) => ({
+    id: String(task.id),
+    title: task.title,
+    description: task.description ?? '',
+    status: (task.status ?? 'TODO').toLowerCase().replace(/_/g, '-'),
+    priority: (task.priority ?? 'MEDIUM').toLowerCase(),
+    projectId: String(task.projectId),
+    projectName: task.project?.name ?? '',
+    assignedToUserId: task.assignedToId ? String(task.assignedToId) : '',
+    assignedTo: task.assignedTo ?? null,
+    sprintId: task.sprintId ? String(task.sprintId) : null,
+    sprintName: task.sprint?.name ?? null,
+    startDate: task.startDate ? new Date(task.startDate).toISOString() : null,
+    dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+    duration: task.estimatedHours ?? 0,
+    progress: task.progressPercent ?? 0,
+    dependencies: (task.dependencies ?? []).map((d) => String(d.dependencyId ?? d.id ?? '')),
+  }));
 };
 
 /**

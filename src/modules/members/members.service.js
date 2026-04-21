@@ -4,20 +4,45 @@ const prisma = require('../../config/prisma');
  * Add a member to a project
  */
 const addMemberToProject = async (projectId, memberData) => {
-  const { userId, skills = [], experienceLevel, weeklyAvailability, role } = memberData;
+  const { userId, username, skills = [], experienceLevel, weeklyAvailability, role } = memberData;
 
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) {
     throw new Error('Project not found');
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  let targetUserId = userId;
+
+  // Resolve username to userId if provided
+  if (!targetUserId && username) {
+    console.log(`[addMemberToProject] Resolving username: ${username}`);
+    const resolvedUser = await prisma.user.findFirst({
+      where: {
+        username: {
+          equals: username,
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    if (!resolvedUser) {
+      throw new Error(`User with username "${username}" not found`);
+    }
+    targetUserId = resolvedUser.id;
+    console.log(`[addMemberToProject] Resolved username "${username}" to userId: ${targetUserId}`);
+  }
+
+  if (!targetUserId) {
+    throw new Error('Either userId or username is required');
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: targetUserId } });
   if (!user) {
     throw new Error('User not found');
   }
 
   const existing = await prisma.projectMember.findUnique({
-    where: { userId_projectId: { userId, projectId } },
+    where: { userId_projectId: { userId: targetUserId, projectId } },
   });
   if (existing) {
     throw new Error('User is already a member of this project');
@@ -25,7 +50,7 @@ const addMemberToProject = async (projectId, memberData) => {
 
   return prisma.projectMember.create({
     data: {
-      userId,
+      userId: targetUserId,
       projectId,
       role: role || 'MEMBER',
       experienceLevel: experienceLevel || 'MID',

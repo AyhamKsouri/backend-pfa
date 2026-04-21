@@ -1,4 +1,5 @@
 const projectsService = require('./projects.service');
+const membersService = require('../members/members.service');
 
 /**
  * Get projects for the logged-in user
@@ -49,31 +50,48 @@ const createProject = async (req, res) => {
 /**
  * Trigger AI project planning (Tasks and Dependencies)
  */
-const triggerAIPlan = async (req, res) => {
+const triggerAIPlan = async (req, res, next) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
-    
-    // We respond with 202 Accepted immediately to indicate processing has started
-    // But since the service call is currently synchronous (await), we wait for it.
-    // In a production app, this might be offloaded to a background worker.
+    console.log('[triggerAIPlan] Request received:', {
+      projectId: id,
+      userId: req.user?.id,
+      userRole: req.user?.role,
+      method: req.method,
+      originalUrl: req.originalUrl,
+    });
+
     const result = await projectsService.generateAIPlan(id);
-    
+
+    console.log('[triggerAIPlan] Request completed successfully:', {
+      projectId: id,
+      taskCount: result?.taskCount || 0,
+    });
+
     res.status(202).json({
       message: 'Project planning initiated and accepted',
       details: result
     });
   } catch (error) {
-    console.error('Error triggering AI plan:', error);
-    
-    if (error.message === 'Project not found') {
-      return res.status(404).json({ message: error.message });
-    }
+    error.requestContext = {
+      projectId: id,
+      userId: req.user?.id,
+      userRole: req.user?.role,
+      method: req.method,
+      originalUrl: req.originalUrl,
+    };
 
-    if (error.message.includes('Failed to connect') || error.message.includes('AI Service Error')) {
-      return res.status(502).json({ message: error.message });
-    }
-    
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('[triggerAIPlan] Request failed:', {
+      projectId: id,
+      userId: req.user?.id,
+      message: error.message,
+      statusCode: error.statusCode || 500,
+      stage: error.stage || 'unknown',
+      stack: error.stack,
+      details: error.responseData || error.details || null,
+    });
+    return next(error);
   }
 };
 
@@ -117,6 +135,25 @@ const updateMethodology = async (req, res) => {
   }
 };
 
+/**
+ * Add a member to a project (Admin only)
+ */
+const addMember = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const memberData = req.body;
+
+    const newMember = await membersService.addMemberToProject(parseInt(id), memberData);
+    res.status(201).json(newMember);
+  } catch (error) {
+    console.error('Error adding member to project:', error);
+    if (error.message.includes('not found') || error.message.includes('already a member')) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getProjects,
   getProject,
@@ -124,4 +161,5 @@ module.exports = {
   triggerAIPlan,
   deleteProject,
   updateMethodology,
+  addMember,
 };

@@ -12,7 +12,7 @@ const getSchedule = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    res.status(200).json(schedule);
+    res.status(200).json({ tasks: schedule });
   } catch (error) {
     console.error('Error fetching project schedule:', error);
     res.status(500).json({ message: 'Internal server error' });

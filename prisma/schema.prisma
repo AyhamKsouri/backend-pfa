@@ -96,6 +96,7 @@ model Project {
   status           ProjectStatus @default(ACTIVE)
   complexity       Complexity    @default(MEDIUM)
   durationMonths   Int
+  generated        Boolean       @default(false)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -194,6 +195,7 @@ model Task {
   startDate       DateTime?
   dueDate         DateTime?
   estimatedHours  Int?
+  priority        Complexity @default(MEDIUM)
   aiGenerated     Boolean    @default(false)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt

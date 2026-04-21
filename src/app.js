@@ -6,6 +6,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { helmetMiddleware } = require('./middleware/security');
 const { globalLimiter } = require('./middleware/rateLimiter');
+const { errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
 
@@ -44,5 +45,6 @@ app.use('/api/tasks', require('./modules/tasks/tasks.routes'));
 app.use('/api/comments', require('./modules/comments/comments.routes'));
 app.use('/api/members', require('./modules/members/members.routes'));
 app.use('/api/schedule', require('./modules/schedule/schedule.routes'));
+app.use(errorHandler);
 
 module.exports = app;

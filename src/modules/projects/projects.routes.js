@@ -108,6 +108,43 @@ router.post('/:id/plan', authorize('ADMIN'), projectsController.triggerAIPlan);
 
 /**
  * @swagger
+ * /api/projects/{id}/members:
+ *   post:
+ *     summary: Add a member to a project
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *               username:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [ADMIN, MEMBER]
+ *     responses:
+ *       201:
+ *         description: Member added
+ *       403:
+ *         description: Forbidden - Admin only
+ */
+// POST /projects/:id/members - Add a member to a project (Admin only)
+router.post('/:id/members', authorize('ADMIN'), projectsController.addMember);
+
+/**
+ * @swagger
  * /api/projects/{id}/methodology:
  *   patch:
  *     summary: Update project methodology

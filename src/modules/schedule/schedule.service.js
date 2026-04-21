@@ -5,71 +5,43 @@ const prisma = require('../../config/prisma');
  * Returns tasks with start/end dates and dependencies, optionally grouped by sprint
  */
 const getProjectSchedule = async (projectId) => {
-  const project = await prisma.project.findUnique({
-    where: { id: parseInt(projectId) },
+  const numericProjectId = parseInt(projectId);
+  const tasks = await prisma.task.findMany({
+    where: { projectId: numericProjectId },
     include: {
-      tasks: {
-        include: {
-          dependencies: {
-            select: {
-              dependencyId: true,
-            },
-          },
-        },
-        orderBy: {
-          startDate: 'asc',
-        },
-      },
-      sprints: {
-        orderBy: {
-          startDate: 'asc',
-        },
-      },
+      assignedTo: { select: { id: true, username: true, email: true } },
+      dependencies: true,
+      sprint: true,
     },
   });
 
-  if (!project) return null;
+  const toUnix = (val) => {
+    if (!val) return null;
+    const d = val instanceof Date ? val : new Date(val);
+    return isNaN(d.getTime()) ? null : Math.floor(d.getTime() / 1000);
+  };
 
-  // Format tasks for ngx-gantt: { id, title, start, end, dependencies }
-  const formattedTasks = project.tasks.map(task => ({
-    id: task.id.toString(),
+  const formatted = tasks.map((task) => ({
+    id: String(task.id),
     title: task.title,
-    // Convert dates to Unix timestamps (seconds) as expected by many Gantt libraries, 
-    // or ISO strings. ngx-gantt usually works with Unix timestamps (ms) or Date objects.
-    // We'll provide Unix timestamps in milliseconds.
-    start: task.startDate ? new Date(task.startDate).getTime() : null,
-    end: task.dueDate ? new Date(task.dueDate).getTime() : null,
-    // dependencies should be an array of task IDs
-    links: task.dependencies.map(dep => dep.dependencyId.toString()),
-    progress: task.progressPercent,
-    status: task.status,
-    sprintId: task.sprintId
+    description: task.description ?? '',
+    status: (task.status ?? 'TODO').toLowerCase().replace('_', '-'), // normalize to lowercase
+    priority: task.priority ?? 'MEDIUM',
+    projectId: String(task.projectId),
+    assignedToId: task.assignedToId ? String(task.assignedToId) : null,
+    assignedTo: task.assignedTo ?? null,
+    sprintId: task.sprintId ? String(task.sprintId) : null,
+    startDate: task.startDate ? new Date(task.startDate).toISOString() : null,
+    dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null,
+    start: toUnix(task.startDate),
+    end: toUnix(task.dueDate),
+    dependencies: task.dependencies.map((d) => String(d.dependencyId ?? d.id ?? '')),
+    progress: task.progressPercent ?? 0,
   }));
 
-  // If sprints exist, group tasks by sprint for the Gantt view
-  if (project.sprints.length > 0) {
-    const ganttData = project.sprints.map(sprint => ({
-      id: `sprint-${sprint.id}`,
-      title: sprint.name,
-      start: new Date(sprint.startDate).getTime(),
-      end: new Date(sprint.endDate).getTime(),
-      children: formattedTasks.filter(t => t.sprintId === sprint.id)
-    }));
+  console.log('[ScheduleService] Final formatted response:', JSON.stringify(formatted, null, 2));
 
-    // Add tasks not assigned to any sprint
-    const unscheduledTasks = formattedTasks.filter(t => !t.sprintId);
-    if (unscheduledTasks.length > 0) {
-      ganttData.push({
-        id: 'unscheduled',
-        title: 'Unscheduled Tasks',
-        children: unscheduledTasks
-      });
-    }
-
-    return ganttData;
-  }
-
-  return formattedTasks;
+  return formatted;
 };
 
 module.exports = {
